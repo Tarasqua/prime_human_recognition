@@ -99,11 +99,12 @@ class Preprocessor:
                     total=len(list(directory.glob('*.png'))), colour='blue'):
                 posed: Results = self.yolo_pose.predict(  # применяем модель позы
                     image, classes=[0], verbose=False)[0]
-                for pose_det in posed:  # проходимся по найденным людям
+                for i, pose_det in enumerate(posed):  # проходимся по найденным людям
                     preprocessed_frame = self.segment_crop_frame(pose_det)  # предобрабатываем изображение
                     if preprocessed_frame is None:
                         continue
-                    cv2.imwrite((save_dir / image.name).as_posix(), preprocessed_frame)  # сохраняем его
+                    cv2.imwrite(  # сохраняем его
+                        (save_dir / (image.stem + f'_{i}' + image.suffix)).as_posix(), preprocessed_frame)
 
 
 if __name__ == '__main__':
