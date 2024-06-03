@@ -1,7 +1,10 @@
 import os
 from pathlib import Path
+from typing import Tuple
 from time import perf_counter
 
+import cv2
+import numpy as np
 from ultralytics import YOLO
 from loguru import logger
 
@@ -12,6 +15,7 @@ def log_trace(func):
     :param func: Функция, которая будет задекорирована.
     :return: Задекорированая функция.
     """
+
     def wrapper(*args, **kwargs):
         logger.info(f'Calling {func.__name__} function '
                     f'with args: {args}, kwargs: {kwargs}')
@@ -25,6 +29,7 @@ def log_trace(func):
             logger.success(f'Function {func.__name__} successfully finished '
                            f'in {round(perf_counter() - start_time, 2)} seconds')
         return original_result
+
     return wrapper
 
 
@@ -46,4 +51,3 @@ def set_yolo_model(yolo_model: str, yolo_class: str, task: str = 'detect') -> YO
     if not os.path.exists(f'{model_path}.onnx'):
         YOLO(model_path).export(format='onnx')
     return YOLO(f'{model_path}.onnx', task=task, verbose=False)
-
