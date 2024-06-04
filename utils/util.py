@@ -1,10 +1,7 @@
 import os
 from pathlib import Path
-from typing import Tuple
 from time import perf_counter
 
-import cv2
-import numpy as np
 from ultralytics import YOLO
 from loguru import logger
 

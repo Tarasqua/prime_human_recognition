@@ -174,12 +174,14 @@ class Preprocessor:
         # иначе же просто берем верхнюю треть человека
         return segmented_frame[:int(tl_coords[1] / 3), :, :]
 
-    def segment_crop_frame(self, pose_detection: Results, margin: bool = True, kpts_conf: float = 0.5) -> np.array:
+    def segment_crop_frame(self, pose_detection: Results, margin: bool = True, grayscale: bool = True,
+                           kpts_conf: float = 0.5) -> np.array:
         """
         Выравнивание по глазам, сегментация, обрезка изображения для вычленения верхней части тела человека,
         а также перевод в грейскейл.
         :param pose_detection: Результат детекции позы человека.
         :param margin: Добавлять ли отступы слева и справа от ббокса (5% от ширины ббокса).
+        :param grayscale: Переводить ли изображения в грейскейл.
         :param kpts_conf: Conf для ключевых точек.
         :return: Кропнутое и загрейскейленное изображение верхней части тела человека.
         """
@@ -195,11 +197,12 @@ class Preprocessor:
             y_nz, x_nz = np.nonzero(cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY))  # координаты ненулевых пикселей
             if any([y_nz.shape[0], x_nz.shape[0]]):
                 cropped = cropped[np.min(y_nz):np.max(y_nz), np.min(x_nz):np.max(x_nz)]  # применяем к кропнутому кадру
-            return cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+            return cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY) if grayscale else cropped
         return None
 
     @log_trace
-    def preprocess_data(self, data_path: Path, margin: bool = True, kpts_conf: float = 0.5) -> None:
+    def preprocess_data(self, data_path: Path, margin: bool = True, grayscale: bool = True,
+                        save_dir: str = 'preprocessed', kpts_conf: float = 0.5) -> None:
         """
         Предобработка данных для обучения:
         - находим людей в кадре;
@@ -208,10 +211,12 @@ class Preprocessor:
         - сохраняем обработанные изображения.
         :param data_path: Путь до директории с данными в формате '../data/1/*.png', '../data/2/*.png', ...
         :param margin: Добавлять ли отступы слева и справа от ббокса (5% от ширины ббокса).
+        :param grayscale: Переводить ли изображения в грейскейл.
+        :param save_dir: Наименование для директории, в которую будут сохранены результаты работы алгоритма.
         :param kpts_conf: Conf для ключевых точек.
         :return: None.
         """
-        save_path: Path = data_path.parent / 'preprocessed'  # путь для сохранения обработанных изображений
+        save_path: Path = data_path.parent / save_dir  # путь для сохранения обработанных изображений
         for directory in tqdm(  # проходимся по директориям
                 data_path.glob('*'), desc='Preprocessing directories',
                 total=len(list(data_path.glob('*'))), colour='green'):
@@ -226,7 +231,7 @@ class Preprocessor:
                     image, classes=[0], verbose=False)[0]
                 for i, pose_det in enumerate(posed):  # проходимся по найденным людям
                     if (preprocessed_frame := self.segment_crop_frame(  # предобрабатываем изображение
-                            pose_det, margin=margin, kpts_conf=kpts_conf)) is None:
+                            pose_det, margin=margin, grayscale=grayscale, kpts_conf=kpts_conf)) is None:
                         continue
                     cv2.imwrite(  # сохраняем его
                         (save_dir / (image.stem + f'_{i}' + image.suffix)).as_posix(), preprocessed_frame)
@@ -234,4 +239,5 @@ class Preprocessor:
 
 if __name__ == '__main__':
     p = Preprocessor('m', 'm')
-    p.preprocess_data((Path.cwd().parents[0] / 'resources' / 'data' / 'raw_kitchen'))
+    p.preprocess_data((Path.cwd().parents[0] / 'resources' / 'data' / 'raw_kitchen'),
+                      save_dir='preprocessed_color', grayscale=False)
