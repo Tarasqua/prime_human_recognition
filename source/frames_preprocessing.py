@@ -237,7 +237,26 @@ class Preprocessor:
                         (save_dir / (image.stem + f'_{i}' + image.suffix)).as_posix(), preprocessed_frame)
 
 
+@log_trace
+def convert_to_grayscale(preprocessed_path: Path, save_dir: str) -> np.array:
+    save_path: Path = preprocessed_path.parent / save_dir  # путь для сохранения обработанных изображений
+    for directory in tqdm(  # проходимся по директориям
+            preprocessed_path.glob('*'), desc='Preprocessing directories',
+            total=len(list(preprocessed_path.glob('*'))), colour='green'):
+        if not directory.is_dir():  # если это не директория, скипаем
+            continue
+        # создаем директорию для сохранения
+        (save_dir := save_path / directory.name).mkdir(parents=True, exist_ok=True)
+        for image in tqdm(  # берем только пнг-шки
+                directory.glob('*.png'), desc='Preprocessing images',
+                total=len(list(directory.glob('*.png'))), colour='blue'):
+            cv2.imwrite(  # сохраняем его
+                (save_dir / image.name).as_posix(), cv2.imread(image.as_posix(), cv2.IMREAD_GRAYSCALE))
+
+
 if __name__ == '__main__':
-    p = Preprocessor('m', 'm')
-    p.preprocess_data((Path.cwd().parents[0] / 'resources' / 'data' / 'raw_kitchen'),
-                      save_dir='preprocessed_color', grayscale=False)
+    # p = Preprocessor('m', 'm')
+    # p.preprocess_data((Path.cwd().parents[0] / 'resources' / 'data' / 'raw_kitchen'),
+    #                   save_dir='preprocessed_color', grayscale=False)
+    convert_to_grayscale((Path.cwd().parents[0] / 'resources' / 'data' / 'preprocessed_color'),
+                         'preprocessed_grayscale')
